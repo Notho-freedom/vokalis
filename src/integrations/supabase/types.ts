@@ -14,7 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      api_usage: {
+        Row: {
+          api_key_id: string | null
+          characters: number
+          created_at: string
+          endpoint: string
+          id: string
+          status: number
+          user_id: string
+          voice: string | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          characters?: number
+          created_at?: string
+          endpoint: string
+          id?: string
+          status?: number
+          user_id: string
+          voice?: string | null
+        }
+        Update: {
+          api_key_id?: string | null
+          characters?: number
+          created_at?: string
+          endpoint?: string
+          id?: string
+          status?: number
+          user_id?: string
+          voice?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      favorite_voices: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          voice_short_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          voice_short_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          voice_short_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
