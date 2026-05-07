@@ -1,167 +1,125 @@
-# Vocalis — Plateforme TTS
+# Refonte Vocalis — Design éditorial + Backend amélioré
 
-Transformation complète du projet actuel (Aura Campaigns) en service Text-to-Speech basé sur le backend FastAPI déjà déployé sur `https://low-tts.onrender.com`.
-
-## 1. Identité & design
-
-- **Nom proposé** : *Vocalis* (modifiable)
-- **Thème** : sombre par défaut + toggle clair, accent **violet → cyan néon** (gradient), typographie Space Grotesk (titres) + Inter (corps), grain subtil, glow halos, style "developer tool" premium type Vercel/Linear
-- Reset complet de `index.css` (palette violet/cyan), nouveaux tokens `--brand`, `--brand-2`, `--surface`, états sombre/clair via classe `dark`
-- ThemeProvider + toggle dans le header
-
-## 2. Architecture des pages
-
-```
-/                    Landing (hero + démo live + features + voix populaires + CTA)
-/playground          Playground TTS interactif
-/voices              Bibliothèque de voix (filtres langue/genre/pays + previews)
-/docs                Documentation API (endpoints, exemples curl/JS/Python)
-/dashboard           (auth) Clés API, usage, historique
-/auth                Login + Signup (email/password + Google)
-```
-
-Suppression des pages campagnes (`CampaignDetail`, store campaign, dialogs) et du code Vapi non pertinent (on garde l'edge function Vapi en place mais on la débranche du front).
-
-## 3. Intégration backend TTS
-
-Toutes les requêtes passent par un **proxy edge function** `tts-proxy` côté Lovable Cloud, qui :
-- Vérifie la clé API (header `x-api-key`) ou la session utilisateur
-- Incrémente le compteur d'usage (table `api_usage`)
-- Forward vers `https://low-tts.onrender.com` (configurable via secret `TTS_BACKEND_URL`)
-- Renvoie le flux audio MP3 ou JSON
-
-Routes côté front exposées via le proxy :
-- `POST /tts` → synthèse (text, voice) → MP3
-- `GET /voices` → toutes les voix (caché 1h en mémoire edge)
-- `GET /voices-by-language/:code`
-- `POST /voices-by-text` (détection auto langue)
-- `GET /status`
-
-Dans le playground, on appelle directement le backend public pour la latence (pas besoin de clé), mais le dashboard montre les exemples via le proxy avec clé API.
-
-## 4. Authentification & base de données
-
-Auth Lovable Cloud : email/password + Google. Pas de profil étendu nécessaire pour démarrer (on peut ajouter `profiles` plus tard pour avatar/nom).
-
-Tables :
-
-```
-api_keys
-  id uuid pk
-  user_id uuid → auth.users
-  name text                 -- "Production", "Test"
-  key_prefix text           -- "vk_live_abcd" (affiché)
-  key_hash text             -- SHA-256 stocké
-  last_used_at timestamptz
-  created_at timestamptz
-  revoked_at timestamptz nullable
-
-api_usage
-  id uuid pk
-  user_id uuid
-  api_key_id uuid nullable
-  endpoint text             -- "tts" | "voices" | ...
-  characters int            -- longueur texte synthétisé
-  voice text nullable
-  status int
-  created_at timestamptz
-
-favorite_voices
-  id uuid pk
-  user_id uuid
-  voice_short_name text
-  created_at timestamptz
-  unique(user_id, voice_short_name)
-```
-
-RLS :
-- `api_keys` : select/insert/update où `user_id = auth.uid()` (jamais exposer `key_hash`)
-- `api_usage` : select uniquement le sien ; insert via service role depuis l'edge function
-- `favorite_voices` : CRUD propriétaire
-
-Génération de clé : format `vk_live_<32 chars random>`, hash SHA-256 en DB, valeur claire montrée **une seule fois** à la création.
-
-## 5. Playground (`/playground`)
-
-- Grand textarea (max 5000 char, compteur)
-- Sélecteur langue (auto-détection bouton "Détecter")
-- Liste filtrable des voix de la langue sélectionnée (cards avec genre, locale, badges Neural)
-- Bouton **Générer** → appel `/api/tts` backend → lecteur audio waveform animé + bouton télécharger MP3
-- Bouton "Voix aléatoire" pour explorer
-- Affichage du header `X-Used-Voice` quand fallback déclenché
-- Persistance des 10 dernières générations en localStorage (et en DB si connecté)
-
-## 6. Bibliothèque (`/voices`)
-
-- Grid de cards voix (chargé via `/api/voices`)
-- Filtres : recherche texte, langue (multi), genre, pays
-- Mini-preview : bouton play qui synthétise une phrase démo de 2-3 mots dans la langue
-- Bouton "favori" si connecté
-- Bouton "copier ShortName" pour les devs
-
-## 7. Documentation (`/docs`)
-
-Layout sidebar + contenu, sections :
-- **Quickstart** (auth header, première requête)
-- **Authentification** (header `x-api-key`)
-- **Endpoints** : `/tts`, `/voices`, `/voices-by-language`, `/voices-by-text`, `/check-voice`, `/status`
-- **Code samples** avec onglets : `curl`, `JavaScript (fetch)`, `Python (requests)`, `Node.js`
-- **Voix recommandées** (top 10 multilingues)
-- **Limites & quotas** (ex: 10 000 char/mois free)
-- **Erreurs** (codes & messages)
-
-Coloration syntaxique via `react-syntax-highlighter` ou `shiki`.
-
-## 8. Dashboard (`/dashboard`)
-
-- Vue clés API (créer, renommer, révoquer, copier) avec modale "clé visible une seule fois"
-- Graph usage 30 jours (caractères/jour) — Recharts (déjà installé)
-- Top voix utilisées
-- Quota du mois (barre progression)
-- Historique récent (table dernières 50 requêtes)
-
-## 9. Landing (`/`)
-
-- Hero : gros titre "Synthèse vocale, gratuite, illimitée*", sous-titre, 2 CTA ("Essayer le playground", "Voir la doc"), démo live mini-playground intégrée (1 phrase préremplie)
-- Section features (4 cards : 400+ voix, 100+ langues, API REST simple, gratuit)
-- Démo code (bloc curl animé typewriter)
-- Showcase voix populaires (carrousel)
-- Stats animées (nombre voix, langues, requêtes)
-- Footer avec liens GitHub/Twitter/contact
-
-## 10. Étapes d'implémentation
-
-1. **Cleanup** : supprimer pages/composants campagnes (`CampaignDetail`, `CampaignStats`, `CreateCampaignDialog`, `AddParticipantDialog`, `StatusBadge`, `campaignStore`, `types/campaign`)
-2. **Design system** : refonte `index.css` + `tailwind.config.ts` (palette violet/cyan, dark mode class, gradients, shadows)
-3. **Layout** : `AppLayout` avec header (logo, nav, theme toggle, login/avatar), footer, ThemeProvider
-4. **Migrations DB** : enum, tables `api_keys` / `api_usage` / `favorite_voices`, RLS, fonction `hash_api_key`
-5. **Auth** : `/auth` page (tabs login/signup, Google OAuth via `lovable.auth.signInWithOAuth`), guard `useAuth` hook
-6. **Edge functions** :
-   - `tts-proxy` (forward vers backend + tracking usage si clé API)
-   - `create-api-key` (génère, hash, stocke, retourne clé claire une fois)
-   - `revoke-api-key`
-7. **Pages** : Landing → Playground → Voices → Docs → Dashboard
-8. **TTS client** : hook `useTTS` (cache liste voix, génération, lecteur audio)
-9. **Composants UI** : `VoiceCard`, `CodeBlock` (avec copy), `WaveformPlayer`, `ApiKeyDialog`, `UsageChart`
-
-## Détails techniques
-
-- Backend public utilisé direct depuis le browser pour playground (CORS déjà ouvert côté FastAPI : `allow_origins=["*"]`)
-- Les exemples montrés dans `/docs` pointent vers le proxy edge function `https://hmbsmkauhjinxdjnlysn.supabase.co/functions/v1/tts-proxy` (URL "officielle" Vocalis) avec header `x-api-key`
-- Cache liste voix : React Query avec `staleTime: 1h`
-- Détection langue côté client : on peut utiliser `franc-min` (lib légère) ou simplement appeler `/api/voices-by-text`
-- Lecteur audio : `<audio>` HTML5 + visualisation custom canvas (waveform animée pendant lecture)
-- Validation Zod sur tous les inputs edge functions
-- Quota mensuel libre : 50 000 caractères/mois/utilisateur (modifiable), reset 1er du mois via comptage `api_usage`
-
-## Hors scope (futur)
-
-- Streaming temps réel (WebSocket)
-- Voice cloning
-- SSML avancé
-- Webhooks pour batch processing
-- Plans payants
+Deux chantiers : (1) refondre intégralement l'UI pour sortir du "template IA générique", (2) regrouper et étendre le code Python dans `backend/` (traduction, streaming, détection améliorée).
 
 ---
 
-Une fois validé, je commence par le cleanup + design system, puis monte les pages dans l'ordre Landing → Playground → Voices → Docs → Auth/Dashboard.
+## 1. Direction artistique — "Editorial Studio"
+
+Abandon du look SaaS violet/cyan néon générique. On vise un truc qui ressemble à un **studio audio éditorial** : monospace dominant, grille typographique, contraste brutal, un seul accent chromatique.
+
+**Système visuel**
+- Palette dark stricte : fond `#0A0A0A`, surface `#111`, bordure `#1F1F1F`, texte `#EDEDED`, muted `#6B6B6B`
+- **Un seul accent** : vert phosphore `#B6F500` (signal "on air", boutons primaires, waveform). Plus de gradient violet/cyan partout.
+- Light mode : papier `#F5F4F0` (off-white type Linear/Vercel), encre `#0A0A0A`, accent identique
+- Typo : **JetBrains Mono** partout pour labels/UI/nav, **Fraunces** (serif éditorial) pour titres hero, **Inter** uniquement pour paragraphes longs
+- Pas de cards génériques arrondies xl avec glow. Bordures 1px nettes, radius 4-6px max, aucune `shadow-glow`.
+- Grille visible discrète, bandes horizontales numérotées (`01 — Playground`), timestamps monospace partout
+
+**Composants à refaire from scratch**
+- `Header` : barre fine 48px, logo = mot `vocalis` en lowercase + point clignotant vert quand audio joue, nav inline avec séparateurs `/`
+- `Footer` : bandeau type colophon de magazine (3 colonnes denses, version, statut backend en live)
+- `Layout` : conteneur max-width 1200px, padding latéral généreux, fond avec subtil bruit film
+- Boutons : flat, bordure 1px, hover = inversion couleur (pas de glow)
+- Inputs : soulignés (border-bottom uniquement), pas de border tout autour
+
+**Pages refaites**
+
+- **Landing (`/`)** : hero pleine hauteur avec un seul énorme mot serif animé qui change de langue (`bonjour / hello / 你好 / مرحبا`), sous-titre mono, démo inline (textarea + bouton "synthesize" qui révèle un waveform), section "specs" en tableau monospace (400+ voix, 100+ langues, 0€), section voix featured en liste (pas en carrousel), CTA final minimal.
+- **Playground (`/playground`)** : layout 2 colonnes — gauche : éditeur texte plein écran avec compteur live (caractères/durée estimée) ; droite : panneau voix (recherche, filtre, 1 voix sélectionnée mise en valeur). Barre du bas fixe : waveform live pendant streaming, contrôles transport (play/pause/seek/download/copy URL), indicateur latence.
+- **Voices (`/voices`)** : liste dense type catalogue de bibliothèque (pas grille de cards). Lignes avec : drapeau, ShortName mono, langue, genre, badge personnalité, bouton play inline. Filtres dans une sidebar gauche fixe. Vue alternative grille minimaliste optionnelle.
+- **Docs (`/docs`)** : layout 3 colonnes (sommaire fixe / contenu / exemple code sticky). Style type Stripe/Linear docs : prose serif, code mono dark, switcher de langage (curl/JS/Python/Node) en haut du panneau code.
+- **Dashboard (`/dashboard`)** : tableau de bord type terminal — header avec quota (barre fine, pas de donut coloré), grand tableau usage récent (mono, sortable), graphique line minimal noir/vert, gestion clés en table éditable inline.
+- **Auth (`/auth`)** : page split-screen, gauche citation/baseline éditoriale, droite formulaire minimal.
+
+**Micro-interactions**
+- Curseur custom sur waveform (barre verticale verte)
+- Transition de page : fondu rapide 120ms, pas de slide tape-à-l'œil
+- Voix qui joue : point vert clignote dans le header + ligne soulignée dans la liste
+- Pas de framer-motion sur tout. Animations CSS sobres uniquement.
+
+---
+
+## 2. Backend Python — `backend/`
+
+Création d'un dossier `backend/` à la racine pour regrouper le code Python (l'utilisateur déploie lui-même sur Render).
+
+```text
+backend/
+├── app.py                  # FastAPI principal
+├── routes/
+│   ├── tts.py              # /api/tts (existant + amélioré)
+│   ├── tts_stream.py       # NOUVEAU /api/tts/stream
+│   ├── voices.py           # /api/voices, /api/voices-by-text
+│   ├── translate.py        # NOUVEAU /api/translate, /api/tts/translated
+│   └── detect.py           # /api/detect-language (extrait + amélioré)
+├── services/
+│   ├── edge_tts_engine.py  # wrapper edge-tts
+│   ├── language.py         # détection (langdetect/lingua) + util
+│   └── translator.py       # NOUVEAU (deep-translator: Google gratuit)
+├── models/
+│   └── schemas.py          # Pydantic
+├── utils/
+│   └── voice_picker.py     # sélection voix par locale + genre + persona
+├── tests/
+│   ├── test_tts.py
+│   ├── test_translate.py
+│   └── test_stream.py
+├── requirements.txt
+├── Dockerfile
+└── README.md
+```
+
+**Nouvelles routes**
+
+- `POST /api/tts/stream` — streaming audio chunké via `StreamingResponse` MP3, headers `X-Used-Voice`, `Transfer-Encoding: chunked`. Permet lecture immédiate dans `<audio>` côté client (MediaSource API).
+- `POST /api/translate` — `{ text, target_lang, source_lang? }` → texte traduit (deep-translator, GoogleTranslator gratuit). Retourne `{ translated, detected_source }`.
+- `POST /api/tts/translated` — combine traduction + TTS en un appel : `{ text, target_lang, voice? }` → audio dans la langue cible avec voix auto-sélectionnée si non fournie.
+- `POST /api/detect-language` — exposition propre de la détection (lingua-language-detector, plus robuste que langdetect), retourne `{ lang, confidence, alternates[] }`.
+- `GET /api/health` — uptime, version, modèles chargés.
+
+**Améliorations existantes**
+- Cache LRU 256 entrées sur `/api/voices` (rechargement edge-tts coûteux)
+- Sélection voix : pondération par popularité + paramètre `persona` ("calm", "news", "cheerful")
+- Validation Pydantic stricte (max 5000 chars, langue ISO valide)
+- Logging structuré JSON
+- Rate limit basique en mémoire (slowapi)
+
+**Tests** : pytest async, coverage des nouvelles routes, fixtures pour mock edge-tts.
+
+---
+
+## 3. Intégration front ↔ backend
+
+- `src/lib/tts.ts` étendu : `synthesizeStream()` (fetch + ReadableStream → MediaSource), `translate()`, `detectLanguage()`.
+- `tts-proxy` edge function : ajout passthrough streaming (relai du body chunké) + nouveaux endpoints `/translate` et `/tts/translated` avec comptage caractères dans `api_usage`.
+- Playground : toggle "Streaming" (défaut on), traduction inline ("Traduire vers : [select]" avant synthèse).
+
+---
+
+## 4. Détails techniques
+
+- Suppression de `framer-motion` pour les composants statiques (gain bundle), conservation pour transitions ciblées.
+- Refonte `index.css` : nouvelles variables HSL, suppression des utilitaires `gradient-brand`, `shadow-glow`, `noise` lourd.
+- `tailwind.config.ts` : ajout `font-serif: Fraunces`, retrait sidebar tokens inutilisés.
+- Police chargée via `@fontsource` (auto-host) au lieu de Google Fonts CDN pour perf.
+- MediaSource fallback : si non supporté, fetch complet puis lecture (déjà cas actuel).
+
+---
+
+## 5. Hors scope
+
+- Voice cloning, SSML, webhooks, plans payants.
+- Déploiement Python (l'utilisateur s'en charge).
+- Migration DB (les tables actuelles suffisent ; on ajoute juste `endpoint='translate'` et `endpoint='tts_stream'` comme valeurs côté usage).
+
+---
+
+## Étapes d'exécution
+
+1. Création `backend/` complet (app.py, routes, services, tests, requirements, Dockerfile, README).
+2. Refonte design system (`index.css`, `tailwind.config.ts`, fonts).
+3. Reconstruction `Layout`, `Header`, `Footer`.
+4. Refonte page par page : Landing → Playground → Voices → Docs → Dashboard → Auth.
+5. Extension `tts-proxy` (streaming + translate) et `src/lib/tts.ts`.
+6. Branchement streaming + traduction dans Playground.
