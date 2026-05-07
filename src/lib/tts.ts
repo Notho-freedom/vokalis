@@ -29,6 +29,17 @@ export async function synthesize(text: string, voice: string): Promise<{ blob: B
   return { blob, usedVoice };
 }
 
+/** Streaming variant — returns a ReadableStream of MP3 chunks. */
+export async function synthesizeStream(text: string, voice: string): Promise<{ stream: ReadableStream<Uint8Array>; usedVoice: string }> {
+  const r = await fetch(`${TTS_BACKEND_URL}/api/tts/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voice }),
+  });
+  if (!r.ok || !r.body) throw new Error(`TTS stream failed: ${r.status}`);
+  return { stream: r.body, usedVoice: r.headers.get("X-Used-Voice") || voice };
+}
+
 export async function detectLanguageVoices(text: string) {
   const r = await fetch(`${TTS_BACKEND_URL}/api/voices-by-text`, {
     method: "POST",
@@ -36,6 +47,26 @@ export async function detectLanguageVoices(text: string) {
     body: JSON.stringify({ text }),
   });
   if (!r.ok) throw new Error("detect failed");
+  return r.json();
+}
+
+export async function detectLanguage(text: string): Promise<{ lang: string; confidence: number; alternates: any[] }> {
+  const r = await fetch(`${TTS_BACKEND_URL}/api/detect-language`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  if (!r.ok) throw new Error("detect failed");
+  return r.json();
+}
+
+export async function translateText(text: string, target_lang: string, source_lang: string = "auto"): Promise<{ translated: string; source_lang: string; target_lang: string }> {
+  const r = await fetch(`${TTS_BACKEND_URL}/api/translate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, target_lang, source_lang }),
+  });
+  if (!r.ok) throw new Error("translate failed");
   return r.json();
 }
 

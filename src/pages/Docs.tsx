@@ -1,24 +1,25 @@
 import { useState } from "react";
 import { CodeBlock } from "@/components/CodeBlock";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PROXY_URL, APP_NAME } from "@/lib/constants";
-import { Key, Zap, ListMusic, Languages, AudioLines, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const sections = [
-  { id: "quickstart", label: "Quickstart", icon: Zap },
-  { id: "auth", label: "Authentification", icon: Key },
-  { id: "tts", label: "POST /tts", icon: AudioLines },
-  { id: "voices", label: "GET /voices", icon: ListMusic },
-  { id: "voices-by-language", label: "GET /voices-by-language", icon: Languages },
-  { id: "voices-by-text", label: "POST /voices-by-text", icon: Languages },
-  { id: "errors", label: "Erreurs", icon: CheckCircle2 },
+  { id: "quickstart", label: "quickstart" },
+  { id: "auth", label: "authentication" },
+  { id: "tts", label: "POST /tts" },
+  { id: "streaming", label: "POST /tts/stream" },
+  { id: "translate", label: "POST /translate" },
+  { id: "tts-translated", label: "POST /tts/translated" },
+  { id: "voices", label: "GET /voices" },
+  { id: "detect", label: "POST /detect-language" },
+  { id: "errors", label: "errors" },
 ];
 
-const samples = {
+const samples: Record<string, string> = {
   curl: `curl -X POST ${PROXY_URL}/tts \\
   -H "x-api-key: vk_live_..." \\
   -H "Content-Type: application/json" \\
-  -d '{"text":"Bonjour le monde","voice":"fr-FR-DeniseNeural"}' \\
+  -d '{"text":"Hello world","voice":"en-US-AriaNeural"}' \\
   --output speech.mp3`,
   js: `const res = await fetch("${PROXY_URL}/tts", {
   method: "POST",
@@ -27,150 +28,215 @@ const samples = {
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    text: "Bonjour le monde",
-    voice: "fr-FR-DeniseNeural",
+    text: "Hello world",
+    voice: "en-US-AriaNeural",
   }),
 });
 
 const blob = await res.blob();
-const audio = new Audio(URL.createObjectURL(blob));
-audio.play();`,
+new Audio(URL.createObjectURL(blob)).play();`,
   python: `import requests
 
 r = requests.post(
     "${PROXY_URL}/tts",
     headers={"x-api-key": "vk_live_..."},
-    json={"text": "Bonjour le monde", "voice": "fr-FR-DeniseNeural"},
+    json={"text": "Hello world", "voice": "en-US-AriaNeural"},
 )
-
-with open("speech.mp3", "wb") as f:
-    f.write(r.content)`,
+open("speech.mp3", "wb").write(r.content)`,
   node: `import fs from "node:fs";
 
 const r = await fetch("${PROXY_URL}/tts", {
   method: "POST",
   headers: { "x-api-key": "vk_live_...", "Content-Type": "application/json" },
-  body: JSON.stringify({ text: "Bonjour le monde", voice: "fr-FR-DeniseNeural" }),
+  body: JSON.stringify({ text: "Hello world", voice: "en-US-AriaNeural" }),
 });
-const buf = Buffer.from(await r.arrayBuffer());
-fs.writeFileSync("speech.mp3", buf);`,
+fs.writeFileSync("speech.mp3", Buffer.from(await r.arrayBuffer()));`,
 };
 
-function Section({ id, title, children }: any) {
+const STREAM_SAMPLE = `// Browser — play as it streams
+const r = await fetch("${PROXY_URL}/tts/stream", {
+  method: "POST",
+  headers: { "x-api-key": "vk_live_...", "Content-Type": "application/json" },
+  body: JSON.stringify({ text: "Lorem ipsum dolor sit amet…" }),
+});
+const blob = await r.blob();
+new Audio(URL.createObjectURL(blob)).play();`;
+
+const TRANSLATE_SAMPLE = `curl -X POST ${PROXY_URL}/translate \\
+  -H "x-api-key: vk_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{"text":"Hello world","target_lang":"fr"}'
+
+# → { "translated": "Bonjour le monde", "source_lang": "auto", "target_lang": "fr" }`;
+
+const TTS_TRANSLATED_SAMPLE = `curl -X POST ${PROXY_URL}/tts/translated \\
+  -H "x-api-key: vk_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{"text":"Hello world","target_lang":"ja"}' \\
+  --output speech_ja.mp3
+# Auto-translates to Japanese, picks a Japanese voice, returns MP3.`;
+
+function Section({ id, num, title, children }: any) {
   return (
-    <section id={id} className="scroll-mt-24 py-8 border-b border-border last:border-0">
-      <h2 className="font-heading font-bold text-2xl md:text-3xl tracking-tight mb-4">{title}</h2>
-      <div className="prose prose-sm dark:prose-invert max-w-none">{children}</div>
+    <section id={id} className="scroll-mt-20 py-12 border-t hairline first:border-0">
+      <div className="mono-label text-muted-foreground mb-4">{num} — {id}</div>
+      <h2 className="font-serif text-3xl md:text-4xl tracking-tight mb-6">{title}</h2>
+      <div className="font-prose text-foreground/90 space-y-4 [&_a]:text-signal [&_a]:underline [&_code]:font-mono [&_code]:text-xs [&_code]:bg-surface [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:border [&_code]:hairline">
+        {children}
+      </div>
     </section>
+  );
+}
+
+function Table({ rows }: { rows: [string, string, string][] }) {
+  return (
+    <table className="w-full font-mono text-xs border hairline mt-4">
+      <thead className="bg-surface">
+        <tr className="border-b hairline">
+          <th className="text-left p-2 mono-label text-muted-foreground">field</th>
+          <th className="text-left p-2 mono-label text-muted-foreground">type</th>
+          <th className="text-left p-2 mono-label text-muted-foreground">description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(([f, t, d]) => (
+          <tr key={f} className="border-b hairline last:border-0">
+            <td className="p-2">{f}</td>
+            <td className="p-2 text-muted-foreground">{t}</td>
+            <td className="p-2 text-muted-foreground">{d}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
 export default function Docs() {
   const [tab, setTab] = useState("curl");
+  const tabs = [["curl", "curl"], ["js", "javascript"], ["python", "python"], ["node", "node"]];
 
   return (
-    <div className="container py-10 md:py-14">
-      <div className="grid lg:grid-cols-[220px_1fr] gap-10">
+    <div>
+      {/* Header */}
+      <div className="border-b hairline">
+        <div className="container py-8">
+          <div className="mono-label text-muted-foreground mb-3">/ docs · v2.0</div>
+          <h1 className="font-serif text-5xl md:text-6xl tracking-tight">
+            The <span className="italic">manual.</span>
+          </h1>
+          <p className="font-mono text-xs text-muted-foreground mt-3 break-all">
+            base url · <span className="text-foreground">{PROXY_URL}</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="container py-10 grid lg:grid-cols-[200px_1fr] gap-12">
         {/* Sidebar */}
         <aside className="hidden lg:block">
-          <div className="sticky top-24">
-            <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-3">Documentation</div>
-            <nav className="space-y-1">
-              {sections.map((s) => (
-                <a key={s.id} href={`#${s.id}`}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-surface-2 transition">
-                  <s.icon className="w-3.5 h-3.5" />{s.label}
-                </a>
-              ))}
-            </nav>
+          <div className="sticky top-16 space-y-1">
+            <div className="mono-label text-muted-foreground mb-3">// contents</div>
+            {sections.map((s, i) => (
+              <a key={s.id} href={`#${s.id}`} className="block px-2 py-1 text-xs font-mono text-muted-foreground hover:text-foreground hover:bg-surface transition">
+                <span className="text-muted-foreground/60">{String(i + 1).padStart(2, "0")}</span>{"  "}{s.label}
+              </a>
+            ))}
           </div>
         </aside>
 
-        {/* Content */}
+        {/* Body */}
         <div>
-          <div className="text-xs font-mono uppercase tracking-wider text-brand mb-2">API Reference v1</div>
-          <h1 className="font-heading font-bold text-4xl md:text-5xl tracking-tight">{APP_NAME} API</h1>
-          <p className="text-muted-foreground mt-3 text-lg">Une API REST minimaliste pour transformer du texte en voix humaine. Authentifie tes requêtes avec une clé API.</p>
-
-          <div className="mt-6 p-4 rounded-lg border border-border bg-surface">
-            <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1">Base URL</div>
-            <div className="font-mono text-sm break-all">{PROXY_URL}</div>
-          </div>
-
-          <Section id="quickstart" title="Quickstart">
-            <ol className="list-decimal list-inside space-y-2 text-foreground">
-              <li>Crée un compte gratuit sur <a href="/auth?mode=signup" className="text-brand hover:underline">/auth</a></li>
-              <li>Génère une clé API depuis ton <a href="/dashboard" className="text-brand hover:underline">dashboard</a></li>
-              <li>Lance ta première requête :</li>
+          <Section id="quickstart" num="01" title="Quickstart.">
+            <ol className="font-mono text-sm space-y-2 list-none pl-0">
+              <li>→ create an account at <a href="/auth?mode=signup">/auth</a></li>
+              <li>→ generate an API key at <a href="/dashboard">/dashboard</a></li>
+              <li>→ make your first call:</li>
             </ol>
-            <Tabs value={tab} onValueChange={setTab} className="mt-4 not-prose">
-              <TabsList>
-                <TabsTrigger value="curl">curl</TabsTrigger>
-                <TabsTrigger value="js">JavaScript</TabsTrigger>
-                <TabsTrigger value="python">Python</TabsTrigger>
-                <TabsTrigger value="node">Node.js</TabsTrigger>
-              </TabsList>
-              <TabsContent value="curl"><CodeBlock code={samples.curl} language="bash" /></TabsContent>
-              <TabsContent value="js"><CodeBlock code={samples.js} language="javascript" /></TabsContent>
-              <TabsContent value="python"><CodeBlock code={samples.python} language="python" /></TabsContent>
-              <TabsContent value="node"><CodeBlock code={samples.node} language="javascript" /></TabsContent>
-            </Tabs>
+            <div className="border hairline bg-surface mt-4">
+              <div className="flex border-b hairline">
+                {tabs.map(([k, l]) => (
+                  <button key={k} onClick={() => setTab(k)} className={cn(
+                    "px-4 py-2 text-xs font-mono uppercase tracking-wider transition",
+                    tab === k ? "text-foreground bg-background" : "text-muted-foreground hover:text-foreground"
+                  )}>{l}</button>
+                ))}
+              </div>
+              <pre className="p-4 text-xs font-mono overflow-x-auto leading-relaxed">{samples[tab]}</pre>
+            </div>
           </Section>
 
-          <Section id="auth" title="Authentification">
-            <p>Toutes les requêtes nécessitent une clé API dans le header <code className="font-mono bg-surface px-1.5 py-0.5 rounded text-xs">x-api-key</code>.</p>
-            <p>Format : <code className="font-mono bg-surface px-1.5 py-0.5 rounded text-xs">vk_live_xxxxxxxxxxxx</code></p>
-            <p className="text-sm text-muted-foreground">Garde tes clés secrètes. Ne les expose jamais côté client en production — utilise un backend proxy.</p>
+          <Section id="auth" num="02" title="Authentication.">
+            <p>All requests authenticate via the <code>x-api-key</code> header.</p>
+            <p>Format · <code>vk_live_xxxxxxxxxxxx</code> · 32 random bytes hex-encoded, prefixed.</p>
+            <p className="text-muted-foreground text-sm">Keep keys server-side. Never ship them to a browser bundle in production.</p>
           </Section>
 
-          <Section id="tts" title="POST /tts — Générer de la parole">
-            <p>Convertit du texte en flux audio MP3.</p>
-            <h4 className="font-heading font-semibold mt-4">Body JSON</h4>
-            <table className="text-sm w-full not-prose mt-2">
-              <thead className="text-xs uppercase text-muted-foreground border-b border-border">
-                <tr><th className="text-left py-2 pr-4">Champ</th><th className="text-left">Type</th><th className="text-left">Description</th></tr>
-              </thead>
-              <tbody className="font-mono text-xs">
-                <tr className="border-b border-border/50"><td className="py-2 pr-4">text</td><td>string</td><td>Texte à synthétiser (max 5000 char)</td></tr>
-                <tr><td className="py-2 pr-4">voice</td><td>string</td><td>ShortName de la voix (ex: fr-FR-DeniseNeural)</td></tr>
-              </tbody>
-            </table>
-            <h4 className="font-heading font-semibold mt-4">Réponse</h4>
-            <p>Flux <code>audio/mpeg</code> avec header <code>x-used-voice</code> indiquant la voix réellement utilisée (peut différer si fallback).</p>
+          <Section id="tts" num="03" title="POST /tts — synthesize.">
+            <p>Convert text into a complete MP3 audio buffer. Returns the full payload once generated.</p>
+            <Table rows={[
+              ["text", "string", "1 to 5000 characters"],
+              ["voice", "string?", "ShortName (auto-picked from text language if omitted)"],
+              ["rate", "string?", "Speech rate, e.g. +10%, -5%"],
+              ["pitch", "string?", "Pitch offset, e.g. +2Hz"],
+              ["persona", "string?", "news / cheerful / calm / friendly"],
+            ]} />
+            <p className="text-sm text-muted-foreground">Response · <code>audio/mpeg</code> · header <code>x-used-voice</code></p>
           </Section>
 
-          <Section id="voices" title="GET /voices — Lister toutes les voix">
+          <Section id="streaming" num="04" title="POST /tts/stream — chunked synthesis.">
+            <p>Same body as <code>/tts</code>, but the MP3 is streamed back chunk-by-chunk via <code>Transfer-Encoding: chunked</code>. First byte arrives in ~300ms — perfect for live playback or low-latency agent loops.</p>
+            <CodeBlock code={STREAM_SAMPLE} language="javascript" />
+          </Section>
+
+          <Section id="translate" num="05" title="POST /translate.">
+            <p>Translate any text to a target language. Free, no key beyond your <code>x-api-key</code>.</p>
+            <Table rows={[
+              ["text", "string", "Text to translate"],
+              ["target_lang", "string", "ISO 639-1 code (fr, en, ja, zh-CN…)"],
+              ["source_lang", "string?", "Defaults to auto-detect"],
+            ]} />
+            <CodeBlock code={TRANSLATE_SAMPLE} language="bash" />
+          </Section>
+
+          <Section id="tts-translated" num="06" title="POST /tts/translated — translate + synth.">
+            <p>One call, one audio. We translate your text, pick a fitting voice in the target language, and return the MP3.</p>
+            <CodeBlock code={TTS_TRANSLATED_SAMPLE} language="bash" />
+          </Section>
+
+          <Section id="voices" num="07" title="GET /voices.">
+            <p>Returns the full catalog of neural voices with locale, gender, and persona tags.</p>
             <CodeBlock code={`curl ${PROXY_URL}/voices -H "x-api-key: vk_live_..."`} language="bash" />
-            <p>Retourne un tableau d'objets voix avec <code>ShortName</code>, <code>Locale</code>, <code>Gender</code>, <code>FriendlyName</code>.</p>
           </Section>
 
-          <Section id="voices-by-language" title="GET /voices-by-language/:code">
-            <p>Filtre les voix par préfixe de langue (ex: <code>fr</code>, <code>en</code>, <code>es</code>).</p>
-            <CodeBlock code={`curl ${PROXY_URL}/voices-by-language/fr -H "x-api-key: vk_live_..."`} language="bash" />
-            <p>Retourne <code>{`{ male_voices: [...], female_voices: [...] }`}</code></p>
-          </Section>
-
-          <Section id="voices-by-text" title="POST /voices-by-text — Détection auto">
-            <p>Détecte la langue du texte et retourne les voix correspondantes.</p>
-            <CodeBlock code={`curl -X POST ${PROXY_URL}/voices-by-text \\
+          <Section id="detect" num="08" title="POST /detect-language.">
+            <p>Robust detection (Lingua) — returns the dominant language plus alternates with confidence.</p>
+            <CodeBlock code={`curl -X POST ${PROXY_URL}/detect-language \\
   -H "x-api-key: vk_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '{"text":"Bonjour tout le monde"}'`} language="bash" />
+  -d '{"text":"Bonjour tout le monde"}'
+
+# → { "lang": "fr", "confidence": 0.998, "alternates": [...] }`} language="bash" />
           </Section>
 
-          <Section id="errors" title="Erreurs">
-            <table className="text-sm w-full not-prose">
-              <thead className="text-xs uppercase text-muted-foreground border-b border-border">
-                <tr><th className="text-left py-2 pr-4">Code</th><th className="text-left">Signification</th></tr>
-              </thead>
-              <tbody className="font-mono text-xs">
-                <tr className="border-b border-border/50"><td className="py-2 pr-4">401</td><td>Clé API manquante ou révoquée</td></tr>
-                <tr className="border-b border-border/50"><td className="py-2 pr-4">429</td><td>Quota mensuel dépassé (50 000 caractères)</td></tr>
-                <tr className="border-b border-border/50"><td className="py-2 pr-4">400</td><td>Body invalide</td></tr>
-                <tr><td className="py-2 pr-4">500</td><td>Erreur serveur — réessayer</td></tr>
+          <Section id="errors" num="09" title="Errors.">
+            <table className="w-full font-mono text-xs border hairline">
+              <tbody>
+                {[
+                  ["401", "Missing or revoked API key"],
+                  ["422", "Invalid request body"],
+                  ["429", "Monthly quota exceeded (50 000 chars)"],
+                  ["500", "Upstream synthesis failure"],
+                ].map(([c, d]) => (
+                  <tr key={c} className="border-b hairline last:border-0">
+                    <td className="p-2 w-16 text-signal">{c}</td>
+                    <td className="p-2 text-muted-foreground">{d}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </Section>
+
+          <div className="py-12 text-center mono-label text-muted-foreground">
+            — end of manual · {APP_NAME.toLowerCase()} v2.0 —
+          </div>
         </div>
       </div>
     </div>
