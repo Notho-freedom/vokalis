@@ -1,0 +1,8 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+edge-tts==6.1.19
+pydantic==2.9.2
+lingua-language-detector==2.0.2
+deep-translator==1.11.4
+slowapi==0.1.9
+python-multipart==0.0.12
