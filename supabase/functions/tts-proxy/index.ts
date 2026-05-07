@@ -2,12 +2,13 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Expose-Headers": "x-used-voice",
+  "Access-Control-Expose-Headers": "x-used-voice, x-detected-language, x-translated-text",
 };
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const TTS_BACKEND = Deno.env.get("TTS_BACKEND_URL") || "https://low-tts.onrender.com";
+const QUOTA = 50_000;
 
 async function sha256(s: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
@@ -18,7 +19,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const url = new URL(req.url);
-  // Path after /tts-proxy
   const subPath = url.pathname.replace(/^.*\/tts-proxy/, "") || "/tts";
 
   const apiKey = req.headers.get("x-api-key");
@@ -46,21 +46,10 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Quota check (50k chars / month)
-  const monthStart = new Date();
-  monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
-  const { data: usageData } = await supa
-    .from("api_usage")
-    .select("characters")
-    .eq("user_id", keyRow.user_id)
-    .gte("created_at", monthStart.toISOString());
-  const usedChars = (usageData || []).reduce((s, r: any) => s + (r.characters || 0), 0);
-  const QUOTA = 50_000;
-
+  // Read body once
   let body: any = null;
   let chars = 0;
   let voice: string | null = null;
-
   if (req.method === "POST") {
     try {
       body = await req.json();
@@ -69,10 +58,22 @@ Deno.serve(async (req) => {
     } catch { body = null; }
   }
 
-  if (subPath.startsWith("/tts") && usedChars + chars > QUOTA) {
-    return new Response(JSON.stringify({ error: "Monthly quota exceeded", quota: QUOTA, used: usedChars }), {
-      status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  // Quota only for billable endpoints (synthesis)
+  const isSynthesis = subPath.startsWith("/tts");
+  if (isSynthesis) {
+    const monthStart = new Date();
+    monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
+    const { data: usageData } = await supa
+      .from("api_usage")
+      .select("characters")
+      .eq("user_id", keyRow.user_id)
+      .gte("created_at", monthStart.toISOString());
+    const usedChars = (usageData || []).reduce((s, r: any) => s + (r.characters || 0), 0);
+    if (usedChars + chars > QUOTA) {
+      return new Response(JSON.stringify({ error: "Monthly quota exceeded", quota: QUOTA, used: usedChars }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
   }
 
   // Forward to backend
@@ -87,10 +88,11 @@ Deno.serve(async (req) => {
   const usedVoice = upstream.headers.get("X-Used-Voice");
 
   // Log usage
+  const endpointKey = subPath.replace(/^\//, "").replace(/\//g, "_") || "tts";
   await supa.from("api_usage").insert({
     user_id: keyRow.user_id,
     api_key_id: keyRow.id,
-    endpoint: subPath.replace(/^\//, "").split("/")[0] || "tts",
+    endpoint: endpointKey,
     characters: chars,
     voice: voice,
     status: upstream.status,
@@ -101,6 +103,10 @@ Deno.serve(async (req) => {
   const ct = upstream.headers.get("content-type");
   if (ct) respHeaders.set("content-type", ct);
   if (usedVoice) respHeaders.set("x-used-voice", usedVoice);
+  const detected = upstream.headers.get("X-Detected-Language");
+  if (detected) respHeaders.set("x-detected-language", detected);
+  const translated = upstream.headers.get("X-Translated-Text");
+  if (translated) respHeaders.set("x-translated-text", translated);
 
   return new Response(upstream.body, { status: upstream.status, headers: respHeaders });
 });
