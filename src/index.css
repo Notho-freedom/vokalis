@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@300;400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,131 +6,169 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 4%;
+    /* Light — paper */
+    --background: 40 12% 96%;
+    --foreground: 0 0% 6%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 4%;
+    --card: 40 12% 98%;
+    --card-foreground: 0 0% 6%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 4%;
+    --popover: 40 12% 98%;
+    --popover-foreground: 0 0% 6%;
 
-    --primary: 263 85% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 6%;
+    --primary-foreground: 40 12% 96%;
 
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 6% 10%;
+    --secondary: 40 8% 92%;
+    --secondary-foreground: 0 0% 6%;
 
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%;
+    --muted: 40 8% 92%;
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 187 95% 50%;
-    --accent-foreground: 240 10% 4%;
+    --accent: 73 100% 48%;
+    --accent-foreground: 0 0% 6%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 70% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 263 85% 60%;
+    --border: 40 6% 86%;
+    --input: 40 6% 86%;
+    --ring: 73 100% 48%;
 
-    --radius: 0.75rem;
+    --radius: 0.25rem;
 
-    --brand: 263 85% 60%;
-    --brand-2: 187 95% 50%;
-    --surface: 240 10% 98%;
-    --surface-2: 240 6% 96%;
-
-    --gradient-brand: linear-gradient(135deg, hsl(263 85% 60%), hsl(187 95% 50%));
-    --gradient-glow: radial-gradient(circle at 50% 0%, hsl(263 85% 60% / 0.15) 0%, transparent 60%);
-    --shadow-glow: 0 0 60px -10px hsl(263 85% 60% / 0.4);
-    --shadow-card: 0 1px 2px hsl(240 6% 10% / 0.04), 0 4px 16px hsl(240 6% 10% / 0.04);
+    --signal: 73 100% 48%;
+    --surface: 40 10% 94%;
+    --surface-2: 40 10% 90%;
+    --hairline: 0 0% 6%;
   }
 
   .dark {
-    --background: 240 12% 4%;
-    --foreground: 240 5% 96%;
+    /* Dark — studio */
+    --background: 0 0% 4%;
+    --foreground: 40 8% 92%;
 
-    --card: 240 10% 6%;
-    --card-foreground: 240 5% 96%;
+    --card: 0 0% 6%;
+    --card-foreground: 40 8% 92%;
 
-    --popover: 240 10% 6%;
-    --popover-foreground: 240 5% 96%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 40 8% 92%;
 
-    --primary: 263 90% 66%;
-    --primary-foreground: 240 12% 4%;
+    --primary: 40 8% 92%;
+    --primary-foreground: 0 0% 4%;
 
-    --secondary: 240 8% 10%;
-    --secondary-foreground: 240 5% 90%;
+    --secondary: 0 0% 9%;
+    --secondary-foreground: 40 8% 92%;
 
-    --muted: 240 8% 9%;
-    --muted-foreground: 240 5% 60%;
+    --muted: 0 0% 9%;
+    --muted-foreground: 0 0% 50%;
 
-    --accent: 187 95% 55%;
-    --accent-foreground: 240 12% 4%;
+    --accent: 73 100% 55%;
+    --accent-foreground: 0 0% 4%;
 
-    --destructive: 0 72% 55%;
+    --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 8% 14%;
-    --input: 240 8% 14%;
-    --ring: 263 90% 66%;
+    --border: 0 0% 13%;
+    --input: 0 0% 13%;
+    --ring: 73 100% 55%;
 
-    --brand: 263 90% 66%;
-    --brand-2: 187 95% 55%;
-    --surface: 240 10% 6%;
-    --surface-2: 240 10% 8%;
-
-    --gradient-brand: linear-gradient(135deg, hsl(263 90% 66%), hsl(187 95% 55%));
-    --gradient-glow: radial-gradient(ellipse 80% 60% at 50% 0%, hsl(263 90% 66% / 0.18) 0%, transparent 70%);
-    --shadow-glow: 0 0 80px -10px hsl(263 90% 66% / 0.5);
-    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.3), 0 8px 32px hsl(0 0% 0% / 0.2);
+    --signal: 73 100% 55%;
+    --surface: 0 0% 6%;
+    --surface-2: 0 0% 8%;
+    --hairline: 40 8% 92%;
   }
 }
 
 @layer base {
   * { @apply border-border; }
+  html { font-feature-settings: 'ss01', 'ss02', 'cv11'; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', sans-serif;
-    font-feature-settings: 'cv11', 'ss01';
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 14px;
+    line-height: 1.5;
   }
-  h1,h2,h3,h4,h5,h6 { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em; }
-  code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Fraunces', ui-serif, Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+  .font-prose {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  ::selection { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
 }
 
 @layer utilities {
-  .text-gradient {
-    background: var(--gradient-brand);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  .text-signal { color: hsl(var(--signal)); }
+  .bg-signal { background: hsl(var(--signal)); }
+  .border-signal { border-color: hsl(var(--signal)); }
+
+  .hairline { border-color: hsl(var(--border)); }
+  .hairline-strong { border-color: hsl(var(--hairline) / 0.2); }
+
+  .mono-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 500;
   }
-  .bg-gradient-brand { background: var(--gradient-brand); }
-  .bg-gradient-glow { background: var(--gradient-glow); }
-  .shadow-glow { box-shadow: var(--shadow-glow); }
-  .shadow-card { box-shadow: var(--shadow-card); }
-  .glass {
-    background: hsl(var(--card) / 0.6);
-    backdrop-filter: blur(16px) saturate(140%);
-    -webkit-backdrop-filter: blur(16px) saturate(140%);
-    border: 1px solid hsl(var(--border));
-  }
-  .grid-bg {
-    background-image:
-      linear-gradient(hsl(var(--border) / 0.4) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--border) / 0.4) 1px, transparent 1px);
-    background-size: 48px 48px;
-    mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, black 30%, transparent 80%);
-  }
-  .noise {
+
+  .grain {
     position: relative;
   }
-  .noise::after {
+  .grain::after {
     content: '';
-    position: absolute; inset: 0;
-    pointer-events: none;
-    opacity: 0.02;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 9999;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
+
+  .signal-dot {
+    display: inline-block;
+    width: 6px; height: 6px; border-radius: 999px;
+    background: hsl(var(--signal));
+    box-shadow: 0 0 0 0 hsl(var(--signal) / 0.6);
+    animation: pulse-ring 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .ticker {
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+  }
+  .ticker-track {
+    display: inline-flex;
+    animation: ticker 40s linear infinite;
+  }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--signal) / 0.6); }
+  50% { box-shadow: 0 0 0 8px hsl(var(--signal) / 0); }
+}
+
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes blink {
+  50% { opacity: 0.3; }
+}
+.cursor-blink::after {
+  content: '_';
+  margin-left: 2px;
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
 }

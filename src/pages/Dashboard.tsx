@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, Copy, Check, Trash2, Key, BarChart3, AlertCircle } from "lucide-react";
+import { Loader2, Plus, Copy, Check, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Progress } from "@/components/ui/progress";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 
 const QUOTA = 50_000;
@@ -53,6 +50,8 @@ export default function Dashboard() {
     return usage.filter((u: any) => new Date(u.created_at) >= start).reduce((s: number, u: any) => s + (u.characters || 0), 0);
   })();
 
+  const totalReqs = usage.length;
+
   const chartData = (() => {
     const buckets: Record<string, number> = {};
     for (let i = 29; i >= 0; i--) {
@@ -79,131 +78,169 @@ export default function Dashboard() {
   };
 
   const revoke = async (id: string) => {
-    if (!confirm("Révoquer définitivement cette clé ?")) return;
+    if (!confirm("Revoke this key permanently?")) return;
     const { error } = await supabase.from("api_keys").update({ revoked_at: new Date().toISOString() }).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Clé révoquée");
+    toast.success("Key revoked");
     qc.invalidateQueries({ queryKey: ["api_keys"] });
   };
 
-  if (authLoading) return <div className="container py-20 text-center"><Loader2 className="w-6 h-6 animate-spin inline" /></div>;
+  if (authLoading) return <div className="container py-20 text-center"><Loader2 className="w-4 h-4 animate-spin inline" /></div>;
+
+  const quotaPct = Math.min(100, (monthChars / QUOTA) * 100);
 
   return (
-    <div className="container py-10 md:py-14">
-      <div className="mb-8">
-        <div className="text-xs font-mono uppercase tracking-wider text-brand mb-2">Dashboard</div>
-        <h1 className="font-heading font-bold text-4xl tracking-tight">Bonjour, <span className="text-gradient">{user?.email?.split("@")[0]}</span></h1>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 p-6 rounded-xl border border-border bg-surface">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Usage 30 jours</div>
-              <div className="font-heading text-3xl font-bold mt-1">{monthChars.toLocaleString()}<span className="text-base text-muted-foreground"> car.</span></div>
-            </div>
-            <BarChart3 className="w-5 h-5 text-brand" />
-          </div>
-          <ResponsiveContainer width="100%" height={140}>
-            <LineChart data={chartData}>
-              <defs>
-                <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="hsl(var(--brand))" />
-                  <stop offset="100%" stopColor="hsl(var(--brand-2))" />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-              <YAxis hide />
-              <Tooltip contentStyle={{ background: "hsl(var(--surface))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
-              <Line type="monotone" dataKey="chars" stroke="url(#g)" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="p-6 rounded-xl border border-border bg-surface">
-          <div className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Quota mensuel</div>
-          <div className="font-heading text-3xl font-bold mt-1">{Math.round((monthChars / QUOTA) * 100)}<span className="text-base text-muted-foreground">%</span></div>
-          <Progress value={(monthChars / QUOTA) * 100} className="mt-4 h-2" />
-          <div className="text-xs text-muted-foreground mt-2">{monthChars.toLocaleString()} / {QUOTA.toLocaleString()} car.</div>
-          <p className="text-xs text-muted-foreground mt-4 leading-relaxed">Reset le 1er de chaque mois. Besoin de plus ? Contacte-nous.</p>
+    <div>
+      {/* HEADER */}
+      <div className="border-b hairline">
+        <div className="container py-8">
+          <div className="mono-label text-muted-foreground mb-3">/ dashboard · console</div>
+          <h1 className="font-serif text-5xl md:text-6xl tracking-tight">
+            <span className="italic">Hello,</span> {user?.email?.split("@")[0]}.
+          </h1>
         </div>
       </div>
 
-      {/* API KEYS */}
-      <div className="rounded-xl border border-border bg-surface mb-8">
-        <div className="p-6 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Key className="w-5 h-5 text-brand" />
-            <div>
-              <h2 className="font-heading font-semibold text-lg">Clés API</h2>
-              <p className="text-xs text-muted-foreground">Utilise ces clés pour authentifier tes requêtes.</p>
-            </div>
-          </div>
-        </div>
-        <div className="p-6 flex gap-2">
-          <Input placeholder="Nom de la clé (ex: Production)" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} className="bg-background" />
-          <Button onClick={createKey} disabled={creating || !newKeyName.trim()} className="bg-gradient-brand text-white hover:opacity-90">
-            {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" />Créer</>}
-          </Button>
-        </div>
-        <div className="border-t border-border">
-          {keys.length === 0 && <div className="p-8 text-center text-sm text-muted-foreground">Aucune clé. Crée ta première clé ci-dessus.</div>}
-          {keys.map((k: any) => (
-            <div key={k.id} className="p-4 border-b border-border last:border-0 flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm">{k.name}</div>
-                <div className="font-mono text-xs text-muted-foreground truncate">{k.key_prefix}{"•".repeat(20)}</div>
-              </div>
-              <div className="text-xs text-muted-foreground hidden sm:block">
-                {k.last_used_at ? `Utilisée le ${new Date(k.last_used_at).toLocaleDateString()}` : "Jamais utilisée"}
-              </div>
-              {k.revoked_at ? (
-                <span className="text-xs font-mono px-2 py-1 rounded bg-destructive/10 text-destructive">Révoquée</span>
-              ) : (
-                <Button variant="ghost" size="icon" onClick={() => revoke(k.id)}><Trash2 className="w-4 h-4" /></Button>
-              )}
+      {/* METRICS STRIP */}
+      <div className="border-b hairline">
+        <div className="container grid grid-cols-2 md:grid-cols-4 divide-x hairline">
+          {[
+            { l: "month chars", v: monthChars.toLocaleString() },
+            { l: "requests 30d", v: totalReqs.toLocaleString() },
+            { l: "quota used", v: `${quotaPct.toFixed(1)}%` },
+            { l: "active keys", v: keys.filter((k: any) => !k.revoked_at).length },
+          ].map((m) => (
+            <div key={m.l} className="p-6">
+              <div className="mono-label text-muted-foreground">{m.l}</div>
+              <div className="font-serif text-4xl mt-2 tabular-nums">{m.v}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* RECENT REQUESTS */}
-      <div className="rounded-xl border border-border bg-surface">
-        <div className="p-6 border-b border-border">
-          <h2 className="font-heading font-semibold text-lg">Requêtes récentes</h2>
-        </div>
-        {usage.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">Aucune requête encore.</div>
-        ) : (
-          <div className="divide-y divide-border">
-            {usage.slice(0, 20).map((u: any, i: number) => (
-              <div key={i} className="p-3 px-6 flex items-center gap-4 text-sm">
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${u.status < 400 ? "bg-brand-2/10 text-brand-2" : "bg-destructive/10 text-destructive"}`}>{u.status}</span>
-                <span className="font-mono text-xs">{u.endpoint}</span>
-                <span className="text-xs text-muted-foreground truncate flex-1">{u.voice || "—"}</span>
-                <span className="text-xs text-muted-foreground">{u.characters} car.</span>
-                <span className="text-xs text-muted-foreground hidden sm:block">{new Date(u.created_at).toLocaleString()}</span>
-              </div>
-            ))}
+      <div className="container py-10 grid lg:grid-cols-3 gap-10">
+        {/* QUOTA + CHART */}
+        <div className="lg:col-span-2 space-y-8">
+          <div>
+            <div className="flex items-baseline justify-between mb-3">
+              <div className="mono-label text-muted-foreground">// usage · last 30 days</div>
+              <div className="font-mono text-xs text-muted-foreground tabular-nums">{monthChars.toLocaleString()} / {QUOTA.toLocaleString()} chars</div>
+            </div>
+            <div className="border hairline">
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={chartData} margin={{ top: 16, right: 16, bottom: 8, left: 8 }}>
+                  <XAxis dataKey="date" tick={{ fontSize: 9, fontFamily: "JetBrains Mono", fill: "hsl(var(--muted-foreground))" }} axisLine={{ stroke: "hsl(var(--border))" }} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ background: "hsl(var(--background))", border: "1px solid hsl(var(--border))", borderRadius: 0, fontSize: 11, fontFamily: "JetBrains Mono" }} />
+                  <Line type="monotone" dataKey="chars" stroke="hsl(var(--signal))" strokeWidth={1.5} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        )}
+
+          {/* QUOTA BAR */}
+          <div>
+            <div className="flex items-baseline justify-between mb-2">
+              <div className="mono-label text-muted-foreground">// monthly quota</div>
+              <div className="font-mono text-xs">{quotaPct.toFixed(1)}%</div>
+            </div>
+            <div className="h-1 bg-border w-full overflow-hidden">
+              <div className="h-full bg-signal transition-all" style={{ width: `${quotaPct}%` }} />
+            </div>
+            <p className="text-[10px] font-mono text-muted-foreground mt-2 uppercase tracking-wider">resets 1st of each month</p>
+          </div>
+
+          {/* RECENT REQUESTS */}
+          <div>
+            <div className="mono-label text-muted-foreground mb-3">// recent requests</div>
+            <div className="border hairline">
+              <div className="grid grid-cols-[60px_80px_1fr_80px_140px] gap-2 px-3 py-2 mono-label text-muted-foreground bg-surface border-b hairline">
+                <span>status</span>
+                <span>endpoint</span>
+                <span>voice</span>
+                <span className="text-right">chars</span>
+                <span className="text-right">time</span>
+              </div>
+              {usage.length === 0 ? (
+                <div className="p-6 text-center text-xs font-mono text-muted-foreground">no requests yet — try the playground</div>
+              ) : (
+                <div className="divide-y hairline">
+                  {usage.slice(0, 30).map((u: any, i: number) => (
+                    <div key={i} className="grid grid-cols-[60px_80px_1fr_80px_140px] gap-2 px-3 py-2 text-xs font-mono items-center">
+                      <span className={u.status < 400 ? "text-signal" : "text-destructive"}>{u.status}</span>
+                      <span className="text-muted-foreground truncate">{u.endpoint}</span>
+                      <span className="text-muted-foreground truncate">{u.voice || "—"}</span>
+                      <span className="text-right tabular-nums">{u.characters}</span>
+                      <span className="text-right text-muted-foreground tabular-nums">{new Date(u.created_at).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* API KEYS */}
+        <aside>
+          <div className="mono-label text-muted-foreground mb-3">// api keys</div>
+          <div className="border hairline">
+            <div className="p-3 border-b hairline flex gap-2">
+              <input
+                value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)}
+                placeholder="key name (e.g. production)"
+                className="flex-1 bg-background border hairline px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-signal"
+              />
+              <button
+                onClick={createKey} disabled={creating || !newKeyName.trim()}
+                className="px-3 py-1.5 text-xs font-mono bg-foreground text-background hover:bg-signal hover:text-accent-foreground transition disabled:opacity-40 inline-flex items-center gap-1"
+              >
+                {creating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                new
+              </button>
+            </div>
+            <div>
+              {keys.length === 0 && <div className="p-6 text-center text-xs font-mono text-muted-foreground">no keys yet</div>}
+              {keys.map((k: any) => (
+                <div key={k.id} className="p-3 border-b hairline last:border-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-xs font-medium">{k.name}</span>
+                    {k.revoked_at ? (
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-destructive">revoked</span>
+                    ) : (
+                      <button onClick={() => revoke(k.id)} className="text-muted-foreground hover:text-destructive">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground truncate">{k.key_prefix}{"•".repeat(20)}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground mt-1">
+                    {k.last_used_at ? `last used · ${new Date(k.last_used_at).toLocaleDateString()}` : "never used"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
       </div>
 
       {/* New key dialog */}
       <Dialog open={!!revealedKey} onOpenChange={(o) => !o && setRevealedKey(null)}>
-        <DialogContent>
+        <DialogContent className="border hairline rounded-none">
           <DialogHeader>
-            <DialogTitle>Ta nouvelle clé API</DialogTitle>
-            <DialogDescription>
-              <AlertCircle className="w-4 h-4 inline mr-1 text-brand" />
-              Copie-la maintenant — elle ne sera plus jamais affichée.
+            <DialogTitle className="font-serif text-2xl">Your new key.</DialogTitle>
+            <DialogDescription className="font-mono text-xs flex items-center gap-2">
+              <AlertCircle className="w-3 h-3 text-signal" />
+              Copy it now — it will never be displayed again.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg border border-border bg-surface-2 p-4 font-mono text-sm break-all">{revealedKey}</div>
-          <Button onClick={() => { navigator.clipboard.writeText(revealedKey!); setCopied(true); toast.success("Copiée"); }} className="bg-gradient-brand text-white">
-            {copied ? <Check className="w-4 h-4 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
-            {copied ? "Copiée" : "Copier la clé"}
-          </Button>
+          <div className="border hairline bg-surface p-4 font-mono text-xs break-all">{revealedKey}</div>
+          <button
+            onClick={() => { navigator.clipboard.writeText(revealedKey!); setCopied(true); toast.success("Copied"); }}
+            className="px-4 py-2 text-xs font-mono bg-foreground text-background hover:bg-signal hover:text-accent-foreground transition inline-flex items-center justify-center gap-2"
+          >
+            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            {copied ? "copied" : "copy key"}
+          </button>
         </DialogContent>
       </Dialog>
     </div>
