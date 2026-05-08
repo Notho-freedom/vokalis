@@ -7,9 +7,12 @@ import { APP_NAME } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { to: "/playground", label: "playground" },
-  { to: "/voices", label: "voices" },
-  { to: "/docs", label: "docs" },
+  { to: "/playground", label: "Playground" },
+  { to: "/lab", label: "Voice Lab" },
+  { to: "/personas", label: "Personas" },
+  { to: "/voices", label: "Voices" },
+  { to: "/reader", label: "Reader" },
+  { to: "/docs", label: "Docs" },
 ];
 
 export function Header() {
@@ -18,76 +21,83 @@ export function Header() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b hairline bg-background/85 backdrop-blur">
-      <div className="container flex h-12 items-center justify-between gap-6">
-        <Link to="/" className="flex items-center gap-2 group shrink-0">
+    <header className="sticky top-0 z-50 border-b hairline bg-background/70 backdrop-blur-xl">
+      <div className="mx-auto max-w-[1400px] px-6 flex h-14 items-center justify-between gap-8">
+        <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
           <span className="signal-dot" />
-          <span className="font-mono font-medium text-sm tracking-tight lowercase">{APP_NAME.toLowerCase()}</span>
-          <span className="mono-label text-muted-foreground hidden sm:inline">v2.0</span>
+          <span className="font-display text-[19px] tracking-tight lowercase">{APP_NAME.toLowerCase()}</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1 text-xs font-mono">
-          {NAV.map((n, i) => (
-            <span key={n.to} className="flex items-center">
-              {i > 0 && <span className="text-muted-foreground/40 mx-1">/</span>}
-              <NavLink
-                to={n.to}
-                className={({ isActive }) =>
-                  cn(
-                    "px-2 py-1 transition-colors",
-                    isActive
-                      ? "text-foreground underline underline-offset-4 decoration-signal decoration-2"
-                      : "text-muted-foreground hover:text-foreground"
-                  )
-                }
-              >
-                {n.label}
-              </NavLink>
-            </span>
+        <nav className="hidden lg:flex items-center gap-7 text-[13px]">
+          {NAV.map((n) => (
+            <NavLink
+              key={n.to}
+              to={n.to}
+              className={({ isActive }) =>
+                cn(
+                  "transition-colors duration-200 relative",
+                  isActive
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {n.label}
+                  {isActive && <span className="absolute -bottom-[18px] left-0 right-0 h-px bg-signal" />}
+                </>
+              )}
+            </NavLink>
           ))}
         </nav>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button onClick={toggle} aria-label="Theme" className="p-2 text-muted-foreground hover:text-foreground transition">
             {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
           </button>
           {user ? (
             <>
-              <Link to="/dashboard" className="hidden md:inline-block px-3 py-1 text-xs font-mono text-muted-foreground hover:text-foreground transition">
-                dashboard
+              <Link to="/dashboard" className="hidden md:inline-block px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground transition">
+                Dashboard
               </Link>
-              <button onClick={signOut} className="px-3 py-1 text-xs font-mono text-muted-foreground hover:text-foreground transition">
-                sign out
+              <button onClick={signOut} className="px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground transition">
+                Sign out
               </button>
             </>
           ) : (
             <>
-              <Link to="/auth" className="hidden md:inline-block px-3 py-1 text-xs font-mono text-muted-foreground hover:text-foreground transition">
-                sign in
+              <Link to="/auth" className="hidden md:inline-block px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground transition">
+                Sign in
               </Link>
               <Link
                 to="/auth?mode=signup"
-                className="ml-1 px-3 py-1 text-xs font-mono bg-foreground text-background hover:bg-signal hover:text-accent-foreground transition"
+                className="ml-1 px-3.5 py-1.5 text-[13px] font-medium bg-foreground text-background hover:bg-signal hover:text-accent-foreground transition rounded-md"
               >
-                get key →
+                Get API key
               </Link>
             </>
           )}
-          <button onClick={() => setOpen(!open)} className="md:hidden p-2 ml-1">
+          <button onClick={() => setOpen(!open)} className="lg:hidden p-2 ml-1">
             {open ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
       {open && (
-        <div className="md:hidden border-t hairline bg-background">
-          <nav className="container py-3 flex flex-col gap-2 text-sm font-mono">
+        <div className="lg:hidden border-t hairline bg-background">
+          <nav className="container py-4 flex flex-col gap-1">
             {NAV.map((n) => (
-              <NavLink key={n.to} to={n.to} onClick={() => setOpen(false)} className="px-2 py-1 text-muted-foreground">
-                / {n.label}
+              <NavLink
+                key={n.to}
+                to={n.to}
+                onClick={() => setOpen(false)}
+                className="px-2 py-2 text-sm text-muted-foreground hover:text-foreground transition"
+              >
+                {n.label}
               </NavLink>
             ))}
-            {user && <Link to="/dashboard" onClick={() => setOpen(false)} className="px-2 py-1">/ dashboard</Link>}
+            {user && <Link to="/dashboard" onClick={() => setOpen(false)} className="px-2 py-2 text-sm">Dashboard</Link>}
           </nav>
         </div>
       )}
@@ -97,46 +107,51 @@ export function Header() {
 
 export function Footer() {
   return (
-    <footer className="border-t hairline mt-24">
-      <div className="container py-12 grid gap-10 md:grid-cols-4 text-xs font-mono">
-        <div>
-          <div className="flex items-center gap-2 mb-4">
+    <footer className="border-t hairline mt-32 relative z-10">
+      <div className="mx-auto max-w-[1400px] px-6 py-16 grid gap-12 md:grid-cols-5 text-[13px]">
+        <div className="md:col-span-2">
+          <div className="flex items-center gap-2.5 mb-5">
             <span className="signal-dot" />
-            <span className="font-medium lowercase">{APP_NAME}</span>
+            <span className="font-display text-2xl lowercase">{APP_NAME}</span>
           </div>
-          <p className="text-muted-foreground leading-relaxed max-w-[28ch]">
-            Free neural text-to-speech. 400+ voices. 100+ languages. Built for makers.
+          <p className="text-muted-foreground leading-relaxed max-w-[36ch]">
+            Cinematic neural text-to-speech. 400+ voices, 100+ languages. Free forever for makers, dependable for production.
           </p>
         </div>
         <div>
-          <div className="mono-label text-muted-foreground mb-4">// product</div>
-          <ul className="space-y-2 text-muted-foreground">
-            <li><Link to="/playground" className="hover:text-foreground">→ playground</Link></li>
-            <li><Link to="/voices" className="hover:text-foreground">→ voice library</Link></li>
-            <li><Link to="/dashboard" className="hover:text-foreground">→ dashboard</Link></li>
+          <div className="mono-label text-muted-foreground mb-4">Product</div>
+          <ul className="space-y-2.5 text-muted-foreground">
+            <li><Link to="/playground" className="hover:text-foreground">Playground</Link></li>
+            <li><Link to="/lab" className="hover:text-foreground">Voice Lab</Link></li>
+            <li><Link to="/personas" className="hover:text-foreground">Personas</Link></li>
+            <li><Link to="/voices" className="hover:text-foreground">Voice library</Link></li>
+            <li><Link to="/reader" className="hover:text-foreground">Article Reader</Link></li>
           </ul>
         </div>
         <div>
-          <div className="mono-label text-muted-foreground mb-4">// developers</div>
-          <ul className="space-y-2 text-muted-foreground">
-            <li><Link to="/docs" className="hover:text-foreground">→ documentation</Link></li>
-            <li><Link to="/docs#streaming" className="hover:text-foreground">→ streaming</Link></li>
-            <li><Link to="/docs#translate" className="hover:text-foreground">→ translation</Link></li>
+          <div className="mono-label text-muted-foreground mb-4">Developers</div>
+          <ul className="space-y-2.5 text-muted-foreground">
+            <li><Link to="/docs" className="hover:text-foreground">Documentation</Link></li>
+            <li><Link to="/docs#streaming" className="hover:text-foreground">Streaming API</Link></li>
+            <li><Link to="/docs#sdk" className="hover:text-foreground">JavaScript SDK</Link></li>
+            <li><Link to="/docs#webhooks" className="hover:text-foreground">Webhooks</Link></li>
+            <li><Link to="/status" className="hover:text-foreground">Status</Link></li>
           </ul>
         </div>
         <div>
-          <div className="mono-label text-muted-foreground mb-4">// status</div>
-          <ul className="space-y-2 text-muted-foreground">
-            <li className="flex items-center gap-2"><span className="signal-dot" /> all systems normal</li>
-            <li>uptime · 99.9%</li>
-            <li>latency · ~620ms</li>
+          <div className="mono-label text-muted-foreground mb-4">System</div>
+          <ul className="space-y-2.5 text-muted-foreground">
+            <li className="flex items-center gap-2"><span className="signal-dot" /> All systems normal</li>
+            <li>Uptime · 99.97%</li>
+            <li>p95 latency · 612ms</li>
+            <li>Voices online · 412</li>
           </ul>
         </div>
       </div>
       <div className="border-t hairline">
-        <div className="container py-4 flex flex-col sm:flex-row justify-between gap-2 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+        <div className="mx-auto max-w-[1400px] px-6 py-5 flex flex-col sm:flex-row justify-between gap-2 text-[11px] font-mono text-muted-foreground">
           <span>© {new Date().getFullYear()} {APP_NAME} — synthetic voice for everyone</span>
-          <span>edge·tts / fastapi / lovable cloud</span>
+          <span className="opacity-70">Built on edge·tts / FastAPI / Lovable Cloud</span>
         </div>
       </div>
     </footer>
@@ -147,7 +162,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background grain">
       <Header />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 relative z-10">{children}</main>
       <Footer />
     </div>
   );
