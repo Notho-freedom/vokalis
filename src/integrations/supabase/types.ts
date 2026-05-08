@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       api_keys: {
         Row: {
+          allowed_origins: string[] | null
           created_at: string
           id: string
           key_hash: string
@@ -26,6 +27,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          allowed_origins?: string[] | null
           created_at?: string
           id?: string
           key_hash: string
@@ -36,6 +38,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          allowed_origins?: string[] | null
           created_at?: string
           id?: string
           key_hash?: string
@@ -52,8 +55,10 @@ export type Database = {
           api_key_id: string | null
           characters: number
           created_at: string
+          duration_ms: number | null
           endpoint: string
           id: string
+          replay_id: string | null
           status: number
           user_id: string
           voice: string | null
@@ -62,8 +67,10 @@ export type Database = {
           api_key_id?: string | null
           characters?: number
           created_at?: string
+          duration_ms?: number | null
           endpoint: string
           id?: string
+          replay_id?: string | null
           status?: number
           user_id: string
           voice?: string | null
@@ -72,8 +79,10 @@ export type Database = {
           api_key_id?: string | null
           characters?: number
           created_at?: string
+          duration_ms?: number | null
           endpoint?: string
           id?: string
+          replay_id?: string | null
           status?: number
           user_id?: string
           voice?: string | null
@@ -106,6 +115,114 @@ export type Database = {
           id?: string
           user_id?: string
           voice_short_name?: string
+        }
+        Relationships: []
+      }
+      lab_projects: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          segments: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          segments?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          segments?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          is_public: boolean
+          pitch: number | null
+          rate: number | null
+          slug: string | null
+          source: string
+          text: string
+          title: string
+          updated_at: string
+          user_id: string
+          voice: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          is_public?: boolean
+          pitch?: number | null
+          rate?: number | null
+          slug?: string | null
+          source?: string
+          text: string
+          title?: string
+          updated_at?: string
+          user_id: string
+          voice?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          is_public?: boolean
+          pitch?: number | null
+          rate?: number | null
+          slug?: string | null
+          source?: string
+          text?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          voice?: string | null
+        }
+        Relationships: []
+      }
+      webhooks: {
+        Row: {
+          active: boolean
+          created_at: string
+          events: string[]
+          id: string
+          secret: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          events?: string[]
+          id?: string
+          secret: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          events?: string[]
+          id?: string
+          secret?: string
+          url?: string
+          user_id?: string
         }
         Relationships: []
       }
