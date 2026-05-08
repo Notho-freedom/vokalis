@@ -49,7 +49,8 @@ export default function Reader() {
     setLoading(true);
     try {
       // Lazy import pdfjs only when needed
-      const pdfjs: any = await import(/* @vite-ignore */ "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs");
+      const pdfUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.mjs";
+      const pdfjs: any = await import(/* @vite-ignore */ pdfUrl);
       pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs";
       const buf = await file.arrayBuffer();
       const doc = await pdfjs.getDocument({ data: buf }).promise;
