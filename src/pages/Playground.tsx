@@ -6,6 +6,7 @@ import { synthesize, fetchVoices, type Voice, langName, countryFlag } from "@/li
 import { PERSONAS } from "@/data/personas";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { LiveWaveform } from "@/components/motion/LiveWaveform";
 import { toast } from "sonner";
 
 export default function Playground() {
@@ -55,9 +56,11 @@ export default function Playground() {
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);
       audioRef.current.src = url;
+      audioRef.current.crossOrigin = "anonymous";
       audioRef.current.onended = () => setPlaying(false);
+      audioRef.current.onpause = () => setPlaying(false);
+      audioRef.current.onplay = () => setPlaying(true);
       await audioRef.current.play();
-      setPlaying(true);
     } catch (e: any) {
       toast.error("Generation failed", { description: e.message });
     } finally {
@@ -121,6 +124,12 @@ export default function Playground() {
               <div className="mono-label text-muted-foreground mb-2 flex justify-between"><span>Pitch</span><span>{pitch > 0 ? "+" : ""}{pitch}</span></div>
               <input type="range" min={-50} max={50} value={pitch} onChange={(e) => setPitch(+e.target.value)} className="w-full accent-[hsl(var(--signal))]" />
             </div>
+          </div>
+          <div className="mt-6 border hairline rounded-md bg-card/40 p-3">
+            <div className="mono-label text-muted-foreground mb-2 flex items-center gap-2">
+              <span className="signal-dot" /> Live signal
+            </div>
+            <LiveWaveform audio={audioRef.current} height={64} />
           </div>
         </div>
 
