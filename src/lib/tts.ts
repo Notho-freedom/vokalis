@@ -40,6 +40,47 @@ export async function synthesizeStream(text: string, voice: string): Promise<{ s
   return { stream: r.body, usedVoice: r.headers.get("X-Used-Voice") || voice };
 }
 
+export type DialogueSegment = { voice: string; text: string; rate?: string; pitch?: string; pause_after_ms?: number };
+
+export async function synthesizeDialogue(segments: DialogueSegment[]): Promise<Blob> {
+  const r = await fetch(`${TTS_BACKEND_URL}/api/tts/dialogue`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ segments }),
+  });
+  if (!r.ok) throw new Error(`Dialogue failed: ${r.status}`);
+  return r.blob();
+}
+
+export type CaptionCue = { start_ms: number; end_ms: number; text: string };
+export type CaptionWord = { offset_ms: number; text: string };
+
+export async function fetchCaptions(text: string, voice: string, words_per_cue = 6):
+  Promise<{ cues: CaptionCue[]; words: CaptionWord[] }> {
+  const r = await fetch(`${TTS_BACKEND_URL}/api/captions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voice, format: "json", words_per_cue }),
+  });
+  if (!r.ok) throw new Error(`Captions failed: ${r.status}`);
+  return r.json();
+}
+
+export async function fetchCaptionFile(text: string, voice: string, format: "srt" | "vtt" = "srt"): Promise<string> {
+  const r = await fetch(`${TTS_BACKEND_URL}/api/captions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voice, format }),
+  });
+  if (!r.ok) throw new Error(`Captions failed: ${r.status}`);
+  return r.text();
+}
+
+export async function fetchHealth(): Promise<any> {
+  const r = await fetch(`${TTS_BACKEND_URL}/api/health`);
+  return r.json();
+}
+
 export async function detectLanguageVoices(text: string) {
   const r = await fetch(`${TTS_BACKEND_URL}/api/voices-by-text`, {
     method: "POST",

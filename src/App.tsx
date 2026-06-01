@@ -17,6 +17,7 @@ import Reader from "./pages/Reader";
 import Projects from "./pages/Projects";
 import Share from "./pages/Share";
 import Status from "./pages/Status";
+import Karaoke from "./pages/Karaoke";
 import NotFound from "./pages/NotFound";
 
 const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } } });
@@ -36,6 +37,7 @@ const App = () => (
                 <Route path="/personas" element={<Personas />} />
                 <Route path="/voices" element={<Voices />} />
                 <Route path="/reader" element={<Reader />} />
+                <Route path="/karaoke" element={<Karaoke />} />
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/share/:slug" element={<Share />} />
                 <Route path="/docs" element={<Docs />} />
