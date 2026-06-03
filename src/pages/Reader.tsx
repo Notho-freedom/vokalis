@@ -14,7 +14,26 @@ export default function Reader() {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [detectedLang, setDetectedLang] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(new Audio());
+
+  const resetAudio = () => {
+    audioRef.current.pause();
+    setPlaying(false);
+    setChapters((c) => c.map((x) => ({ ...x, audioUrl: undefined })));
+  };
+
+  const onVoiceChange = (v: string) => {
+    if (v !== voice) resetAudio();
+    setVoice(v);
+  };
+
+  const autoDetect = async (text: string) => {
+    try {
+      const r = await detectLanguage(text.slice(0, 2000));
+      if (r?.lang) setDetectedLang(r.lang);
+    } catch { /* noop */ }
+  };
 
   const splitToChapters = (text: string): Chapter[] => {
     // naive: split by double newlines or every ~1500 chars
