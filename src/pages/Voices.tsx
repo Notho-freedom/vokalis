@@ -20,6 +20,26 @@ export default function Voices() {
   const [gender, setGender] = useState("all");
   const [playing, setPlaying] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [detectText, setDetectText] = useState("");
+  const [detecting, setDetecting] = useState(false);
+  const [detectedInfo, setDetectedInfo] = useState<{ lang: string; confidence: number } | null>(null);
+
+  const onDetect = async () => {
+    if (!detectText.trim()) return;
+    setDetecting(true);
+    try {
+      const r = await detectLanguage(detectText.slice(0, 2000));
+      if (r?.lang) {
+        setDetectedInfo({ lang: r.lang, confidence: r.confidence });
+        setLang(r.lang);
+        toast.success(`Detected: ${langName(r.lang)} (${Math.round(r.confidence * 100)}%)`);
+      }
+    } catch (e: any) {
+      toast.error("Detection failed", { description: e.message });
+    } finally {
+      setDetecting(false);
+    }
+  };
 
   const languages = useMemo(() => Array.from(new Set(voices.map((v) => v.Locale.split("-")[0]))).sort(), [voices]);
 
