@@ -155,6 +155,18 @@ export default function Reader() {
       )}
 
       {chapters.length > 0 && (
+        <div className="mb-6 p-5 border hairline rounded-lg bg-card/40">
+          <div className="flex items-center justify-between mb-3">
+            <div className="mono-label text-muted-foreground">Voice settings</div>
+            {detectedLang && (
+              <div className="text-[11px] font-mono text-signal">detected: {langName(detectedLang)}</div>
+            )}
+          </div>
+          <VoicePicker value={voice} onChange={onVoiceChange} text={chapters.map(c => c.text).join(" ").slice(0, 2000)} />
+        </div>
+      )}
+
+      {chapters.length > 0 && (
         <div className="space-y-1 border hairline rounded-lg overflow-hidden">
           {chapters.map((ch, i) => (
             <div key={i} className={`flex items-start gap-4 p-4 transition ${current === i ? "bg-signal/10 border-l-2 border-signal" : "bg-card/30 hover:bg-card/60"}`}>
