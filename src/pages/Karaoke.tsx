@@ -122,13 +122,7 @@ export default function Karaoke() {
 
         <div className="bg-card p-6 flex flex-col gap-4">
           <div>
-            <div className="mono-label text-muted-foreground mb-2">Voice</div>
-            <input
-              value={voice}
-              onChange={(e) => setVoice(e.target.value)}
-              className="w-full bg-background border hairline rounded-md px-3 py-2 text-sm font-mono"
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">e.g. fr-FR-DeniseNeural, ja-JP-NanamiNeural</p>
+            <VoicePicker value={voice} onChange={setVoice} text={text} compact />
           </div>
           <button
             onClick={toggle}
