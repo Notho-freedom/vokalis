@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Loader2, Play, Pause, Sparkles } from "lucide-react";
 import { synthesize, fetchCaptions, fetchCaptionFile, type CaptionWord } from "@/lib/tts";
 import { LiveWaveform } from "@/components/motion/LiveWaveform";
+import { VoicePicker } from "@/components/VoicePicker";
 import { toast } from "sonner";
 
 const DEFAULT_TEXT = `In a world of noise, your words can finally have a voice. Paste any passage, choose a voice, and watch each word light up in perfect sync with the audio.`;
