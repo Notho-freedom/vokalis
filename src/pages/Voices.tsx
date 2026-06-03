@@ -92,6 +92,30 @@ export default function Voices() {
         {/* SIDEBAR FILTERS */}
         <aside className="lg:sticky lg:top-16 lg:self-start space-y-6 text-xs font-mono">
           <div>
+            <div className="mono-label text-muted-foreground mb-2 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-signal" /> // detect from text
+            </div>
+            <textarea
+              value={detectText} onChange={(e) => setDetectText(e.target.value)}
+              placeholder="Paste any text…"
+              rows={3}
+              className="w-full bg-background border hairline px-2 py-1.5 text-xs focus:outline-none focus:border-signal resize-none"
+            />
+            <button
+              onClick={onDetect}
+              disabled={detecting || !detectText.trim()}
+              className="mt-1.5 w-full bg-signal text-accent-foreground py-1.5 text-[11px] font-medium disabled:opacity-40 inline-flex items-center justify-center gap-1"
+            >
+              {detecting ? <Loader2 className="w-3 h-3 animate-spin" /> : "→ detect & filter"}
+            </button>
+            {detectedInfo && (
+              <div className="mt-1.5 text-[10px] text-signal">
+                {langName(detectedInfo.lang)} · {Math.round(detectedInfo.confidence * 100)}%
+              </div>
+            )}
+          </div>
+
+          <div>
             <div className="mono-label text-muted-foreground mb-2">// search</div>
             <div className="relative">
               <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
