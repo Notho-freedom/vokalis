@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Play, Loader2, Copy, Check, Pause } from "lucide-react";
+import { Search, Play, Loader2, Copy, Check, Pause, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { fetchVoices, synthesize, langName, countryFlag, type Voice } from "@/lib/tts";
+import { fetchVoices, synthesize, detectLanguage, langName, countryFlag, type Voice } from "@/lib/tts";
 import { cn } from "@/lib/utils";
 
 const SAMPLES: Record<string, string> = {
