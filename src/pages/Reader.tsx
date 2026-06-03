@@ -82,6 +82,7 @@ export default function Reader() {
         full += tc.items.map((it: any) => it.str).join(" ") + "\n\n";
       }
       setChapters(splitToChapters(full));
+      autoDetect(full);
       toast.success(`Loaded ${doc.numPages} pages`);
     } catch (e: any) {
       toast.error("PDF failed", { description: e.message });
