@@ -57,6 +57,7 @@ export default function Reader() {
       const r = await fetch(`https://r.jina.ai/${url}`);
       const text = await r.text();
       setChapters(splitToChapters(text));
+      autoDetect(text);
       toast.success("Article extracted");
     } catch (e: any) {
       toast.error("Extraction failed", { description: e.message });
