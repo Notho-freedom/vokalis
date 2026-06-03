@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
-import { Link2, Upload, Play, Pause, Loader2, FileText, ChevronRight } from "lucide-react";
-import { synthesize } from "@/lib/tts";
+import { Link2, Upload, Play, Pause, Loader2, FileText } from "lucide-react";
+import { synthesize, detectLanguage, langName } from "@/lib/tts";
+import { VoicePicker } from "@/components/VoicePicker";
 import { toast } from "sonner";
 
 type Chapter = { title: string; text: string; audioUrl?: string };
