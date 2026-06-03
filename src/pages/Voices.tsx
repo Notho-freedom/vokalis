@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Play, Loader2, Copy, Check, Pause } from "lucide-react";
+import { Search, Play, Loader2, Copy, Check, Pause, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { fetchVoices, synthesize, langName, countryFlag, type Voice } from "@/lib/tts";
+import { fetchVoices, synthesize, detectLanguage, langName, countryFlag, type Voice } from "@/lib/tts";
 import { cn } from "@/lib/utils";
 
 const SAMPLES: Record<string, string> = {
@@ -20,6 +20,26 @@ export default function Voices() {
   const [gender, setGender] = useState("all");
   const [playing, setPlaying] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [detectText, setDetectText] = useState("");
+  const [detecting, setDetecting] = useState(false);
+  const [detectedInfo, setDetectedInfo] = useState<{ lang: string; confidence: number } | null>(null);
+
+  const onDetect = async () => {
+    if (!detectText.trim()) return;
+    setDetecting(true);
+    try {
+      const r = await detectLanguage(detectText.slice(0, 2000));
+      if (r?.lang) {
+        setDetectedInfo({ lang: r.lang, confidence: r.confidence });
+        setLang(r.lang);
+        toast.success(`Detected: ${langName(r.lang)} (${Math.round(r.confidence * 100)}%)`);
+      }
+    } catch (e: any) {
+      toast.error("Detection failed", { description: e.message });
+    } finally {
+      setDetecting(false);
+    }
+  };
 
   const languages = useMemo(() => Array.from(new Set(voices.map((v) => v.Locale.split("-")[0]))).sort(), [voices]);
 
@@ -71,6 +91,30 @@ export default function Voices() {
       <div className="container py-6 grid lg:grid-cols-[220px_1fr] gap-8">
         {/* SIDEBAR FILTERS */}
         <aside className="lg:sticky lg:top-16 lg:self-start space-y-6 text-xs font-mono">
+          <div>
+            <div className="mono-label text-muted-foreground mb-2 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-signal" /> // detect from text
+            </div>
+            <textarea
+              value={detectText} onChange={(e) => setDetectText(e.target.value)}
+              placeholder="Paste any text…"
+              rows={3}
+              className="w-full bg-background border hairline px-2 py-1.5 text-xs focus:outline-none focus:border-signal resize-none"
+            />
+            <button
+              onClick={onDetect}
+              disabled={detecting || !detectText.trim()}
+              className="mt-1.5 w-full bg-signal text-accent-foreground py-1.5 text-[11px] font-medium disabled:opacity-40 inline-flex items-center justify-center gap-1"
+            >
+              {detecting ? <Loader2 className="w-3 h-3 animate-spin" /> : "→ detect & filter"}
+            </button>
+            {detectedInfo && (
+              <div className="mt-1.5 text-[10px] text-signal">
+                {langName(detectedInfo.lang)} · {Math.round(detectedInfo.confidence * 100)}%
+              </div>
+            )}
+          </div>
+
           <div>
             <div className="mono-label text-muted-foreground mb-2">// search</div>
             <div className="relative">

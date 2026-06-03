@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
-import { Link2, Upload, Play, Pause, Loader2, FileText, ChevronRight } from "lucide-react";
-import { synthesize } from "@/lib/tts";
+import { Link2, Upload, Play, Pause, Loader2, FileText } from "lucide-react";
+import { synthesize, detectLanguage, langName } from "@/lib/tts";
+import { VoicePicker } from "@/components/VoicePicker";
 import { toast } from "sonner";
 
 type Chapter = { title: string; text: string; audioUrl?: string };
@@ -13,7 +14,26 @@ export default function Reader() {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [detectedLang, setDetectedLang] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(new Audio());
+
+  const resetAudio = () => {
+    audioRef.current.pause();
+    setPlaying(false);
+    setChapters((c) => c.map((x) => ({ ...x, audioUrl: undefined })));
+  };
+
+  const onVoiceChange = (v: string) => {
+    if (v !== voice) resetAudio();
+    setVoice(v);
+  };
+
+  const autoDetect = async (text: string) => {
+    try {
+      const r = await detectLanguage(text.slice(0, 2000));
+      if (r?.lang) setDetectedLang(r.lang);
+    } catch { /* noop */ }
+  };
 
   const splitToChapters = (text: string): Chapter[] => {
     // naive: split by double newlines or every ~1500 chars
@@ -37,6 +57,7 @@ export default function Reader() {
       const r = await fetch(`https://r.jina.ai/${url}`);
       const text = await r.text();
       setChapters(splitToChapters(text));
+      autoDetect(text);
       toast.success("Article extracted");
     } catch (e: any) {
       toast.error("Extraction failed", { description: e.message });
@@ -61,6 +82,7 @@ export default function Reader() {
         full += tc.items.map((it: any) => it.str).join(" ") + "\n\n";
       }
       setChapters(splitToChapters(full));
+      autoDetect(full);
       toast.success(`Loaded ${doc.numPages} pages`);
     } catch (e: any) {
       toast.error("PDF failed", { description: e.message });
@@ -129,6 +151,18 @@ export default function Reader() {
               <input type="file" accept="application/pdf" onChange={handlePdf} className="hidden" />
             </label>
           </div>
+        </div>
+      )}
+
+      {chapters.length > 0 && (
+        <div className="mb-6 p-5 border hairline rounded-lg bg-card/40">
+          <div className="flex items-center justify-between mb-3">
+            <div className="mono-label text-muted-foreground">Voice settings</div>
+            {detectedLang && (
+              <div className="text-[11px] font-mono text-signal">detected: {langName(detectedLang)}</div>
+            )}
+          </div>
+          <VoicePicker value={voice} onChange={onVoiceChange} text={chapters.map(c => c.text).join(" ").slice(0, 2000)} />
         </div>
       )}
 

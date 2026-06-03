@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Loader2, Play, Pause, Sparkles } from "lucide-react";
 import { synthesize, fetchCaptions, fetchCaptionFile, type CaptionWord } from "@/lib/tts";
 import { LiveWaveform } from "@/components/motion/LiveWaveform";
+import { VoicePicker } from "@/components/VoicePicker";
 import { toast } from "sonner";
 
 const DEFAULT_TEXT = `In a world of noise, your words can finally have a voice. Paste any passage, choose a voice, and watch each word light up in perfect sync with the audio.`;
@@ -121,13 +122,7 @@ export default function Karaoke() {
 
         <div className="bg-card p-6 flex flex-col gap-4">
           <div>
-            <div className="mono-label text-muted-foreground mb-2">Voice</div>
-            <input
-              value={voice}
-              onChange={(e) => setVoice(e.target.value)}
-              className="w-full bg-background border hairline rounded-md px-3 py-2 text-sm font-mono"
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">e.g. fr-FR-DeniseNeural, ja-JP-NanamiNeural</p>
+            <VoicePicker value={voice} onChange={setVoice} text={text} compact />
           </div>
           <button
             onClick={toggle}
