@@ -1,4 +1,39 @@
-import { TTS_BACKEND_URL } from "./constants";
+import { TTS_BACKEND_URL, TTS_BACKEND_FALLBACK_URLS } from "./constants";
+
+/** All candidate base URLs, primary first. */
+const BACKENDS = [TTS_BACKEND_URL, ...TTS_BACKEND_FALLBACK_URLS];
+
+/** Tracks the last backend that responded OK so subsequent calls hit it first. */
+let activeBackend = TTS_BACKEND_URL;
+
+/**
+ * Fetch with automatic failover across backends.
+ * Tries the active backend first, then falls back to the others on network error or 5xx.
+ */
+export async function ttsFetch(path: string, init?: RequestInit, timeoutMs = 45_000): Promise<Response> {
+  const ordered = [activeBackend, ...BACKENDS.filter((b) => b !== activeBackend)];
+  let lastErr: unknown = null;
+  for (const base of ordered) {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const r = await fetch(`${base}${path}`, { ...init, signal: ctrl.signal });
+      clearTimeout(to);
+      if (r.ok || (r.status >= 400 && r.status < 500)) {
+        activeBackend = base;
+        return r;
+      }
+      lastErr = new Error(`${base} → ${r.status}`);
+    } catch (e) {
+      clearTimeout(to);
+      lastErr = e;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("All TTS backends unreachable");
+}
+
+export function getActiveBackend() { return activeBackend; }
+
 
 export type Voice = {
   Name: string;
