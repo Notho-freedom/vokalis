@@ -1,4 +1,39 @@
-import { TTS_BACKEND_URL } from "./constants";
+import { TTS_BACKEND_URL, TTS_BACKEND_FALLBACK_URLS } from "./constants";
+
+/** All candidate base URLs, primary first. */
+const BACKENDS = [TTS_BACKEND_URL, ...TTS_BACKEND_FALLBACK_URLS];
+
+/** Tracks the last backend that responded OK so subsequent calls hit it first. */
+let activeBackend = TTS_BACKEND_URL;
+
+/**
+ * Fetch with automatic failover across backends.
+ * Tries the active backend first, then falls back to the others on network error or 5xx.
+ */
+export async function ttsFetch(path: string, init?: RequestInit, timeoutMs = 45_000): Promise<Response> {
+  const ordered = [activeBackend, ...BACKENDS.filter((b) => b !== activeBackend)];
+  let lastErr: unknown = null;
+  for (const base of ordered) {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const r = await fetch(`${base}${path}`, { ...init, signal: ctrl.signal });
+      clearTimeout(to);
+      if (r.ok || (r.status >= 400 && r.status < 500)) {
+        activeBackend = base;
+        return r;
+      }
+      lastErr = new Error(`${base} → ${r.status}`);
+    } catch (e) {
+      clearTimeout(to);
+      lastErr = e;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("All TTS backends unreachable");
+}
+
+export function getActiveBackend() { return activeBackend; }
+
 
 export type Voice = {
   Name: string;
@@ -12,17 +47,19 @@ export type Voice = {
 };
 
 export async function fetchVoices(): Promise<Voice[]> {
-  const r = await fetch(`${TTS_BACKEND_URL}/api/voices`);
+  const r = await ttsFetch(`/api/voices`);
   if (!r.ok) throw new Error("Failed to load voices");
   return r.json();
 }
 
+const jsonInit = (body: any): RequestInit => ({
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
+
 export async function synthesize(text: string, voice: string): Promise<{ blob: Blob; usedVoice: string }> {
-  const r = await fetch(`${TTS_BACKEND_URL}/api/tts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, voice }),
-  });
+  const r = await ttsFetch(`/api/tts`, jsonInit({ text, voice }));
   if (!r.ok) throw new Error(`TTS failed: ${r.status}`);
   const usedVoice = r.headers.get("X-Used-Voice") || voice;
   const blob = await r.blob();
@@ -31,11 +68,7 @@ export async function synthesize(text: string, voice: string): Promise<{ blob: B
 
 /** Streaming variant — returns a ReadableStream of MP3 chunks. */
 export async function synthesizeStream(text: string, voice: string): Promise<{ stream: ReadableStream<Uint8Array>; usedVoice: string }> {
-  const r = await fetch(`${TTS_BACKEND_URL}/api/tts/stream`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, voice }),
-  });
+  const r = await ttsFetch(`/api/tts/stream`, jsonInit({ text, voice }));
   if (!r.ok || !r.body) throw new Error(`TTS stream failed: ${r.status}`);
   return { stream: r.body, usedVoice: r.headers.get("X-Used-Voice") || voice };
 }
@@ -43,11 +76,7 @@ export async function synthesizeStream(text: string, voice: string): Promise<{ s
 export type DialogueSegment = { voice: string; text: string; rate?: string; pitch?: string; pause_after_ms?: number };
 
 export async function synthesizeDialogue(segments: DialogueSegment[]): Promise<Blob> {
-  const r = await fetch(`${TTS_BACKEND_URL}/api/tts/dialogue`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ segments }),
-  });
+  const r = await ttsFetch(`/api/tts/dialogue`, jsonInit({ segments }));
   if (!r.ok) throw new Error(`Dialogue failed: ${r.status}`);
   return r.blob();
 }
@@ -57,59 +86,40 @@ export type CaptionWord = { offset_ms: number; text: string };
 
 export async function fetchCaptions(text: string, voice: string, words_per_cue = 6):
   Promise<{ cues: CaptionCue[]; words: CaptionWord[] }> {
-  const r = await fetch(`${TTS_BACKEND_URL}/api/captions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, voice, format: "json", words_per_cue }),
-  });
+  const r = await ttsFetch(`/api/captions`, jsonInit({ text, voice, format: "json", words_per_cue }));
   if (!r.ok) throw new Error(`Captions failed: ${r.status}`);
   return r.json();
 }
 
 export async function fetchCaptionFile(text: string, voice: string, format: "srt" | "vtt" = "srt"): Promise<string> {
-  const r = await fetch(`${TTS_BACKEND_URL}/api/captions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, voice, format }),
-  });
+  const r = await ttsFetch(`/api/captions`, jsonInit({ text, voice, format }));
   if (!r.ok) throw new Error(`Captions failed: ${r.status}`);
   return r.text();
 }
 
 export async function fetchHealth(): Promise<any> {
-  const r = await fetch(`${TTS_BACKEND_URL}/api/health`);
+  const r = await ttsFetch(`/api/health`, undefined, 8000);
   return r.json();
 }
 
 export async function detectLanguageVoices(text: string) {
-  const r = await fetch(`${TTS_BACKEND_URL}/api/voices-by-text`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
+  const r = await ttsFetch(`/api/voices-by-text`, jsonInit({ text }));
   if (!r.ok) throw new Error("detect failed");
   return r.json();
 }
 
 export async function detectLanguage(text: string): Promise<{ lang: string; confidence: number; alternates: any[] }> {
-  const r = await fetch(`${TTS_BACKEND_URL}/api/detect-language`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  });
+  const r = await ttsFetch(`/api/detect-language`, jsonInit({ text }), 10_000);
   if (!r.ok) throw new Error("detect failed");
   return r.json();
 }
 
 export async function translateText(text: string, target_lang: string, source_lang: string = "auto"): Promise<{ translated: string; source_lang: string; target_lang: string }> {
-  const r = await fetch(`${TTS_BACKEND_URL}/api/translate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, target_lang, source_lang }),
-  });
+  const r = await ttsFetch(`/api/translate`, jsonInit({ text, target_lang, source_lang }));
   if (!r.ok) throw new Error("translate failed");
   return r.json();
 }
+
 
 export const LANG_NAMES: Record<string, string> = {
   af: "Afrikaans", am: "Amharique", ar: "Arabe", az: "Azerbaïdjanais", bg: "Bulgare", bn: "Bengali",
